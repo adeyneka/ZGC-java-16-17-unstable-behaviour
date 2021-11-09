@@ -29,7 +29,7 @@ We see the following behavior:
 
 ![ZGC CPU profiling during the problem](ZGC%20CPU%20profiling%20during%20the%20problem.png?raw=true "ZGC CPU profiling during the problem")  
 
-- we see ICBufferFull safepoint events(it's blue on the image)  
+- we see huge number of ICBufferFull safepoint events just before the crash (it's blue vertical lines on the image) 
 
 ![ICBufferFull](ICBufferFull.png?raw=true "ICBufferFull")  
 
