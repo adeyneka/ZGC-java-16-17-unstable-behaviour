@@ -25,10 +25,39 @@ We see the following behavior:
 ![JVM class unloaded](JVM%20class%20unloaded.png?raw=true "JVM class unloaded")  
 ![class unloading](class%20unloading.png?raw=true "class unloading")  
 
-
 - we’ve managed to profile JVM in such ‘unstable’ state and see ZTask consuming a lot of cpu doing CompiledMethod::unload_nmethod_caches(bool) job  
 
 ![ZGC CPU profiling during the problem](ZGC%20CPU%20profiling%20during%20the%20problem.png?raw=true "ZGC CPU profiling during the problem")  
+
+- we see ICBufferFull safepoint events(it's blue on the image)  
+
+![ICBufferFull](ICBufferFull.png?raw=true "ICBufferFull")  
+
+```
+void ZNMethod::unlink(ZWorkers* workers, bool unloading_occurred) {
+  for (;;) {
+    ICRefillVerifier verifier;
+
+    {
+      ZNMethodUnlinkTask task(unloading_occurred, &verifier);
+      workers->run(&task);
+      if (task.success()) {
+        return;
+      }
+    }
+
+    // Cleaning failed because we ran out of transitional IC stubs,
+    // so we have to refill and try again. Refilling requires taking
+    // a safepoint, so we temporarily leave the suspendible thread set.
+    SuspendibleThreadSetLeaver sts;
+    InlineCacheBuffer::refill_ic_stubs();
+  }
+```
+
+- we see big difference in metaspace allocation between java 15 and java 17(1.5kB/s avg. vs 40mb/s)  
+
+![metaspace allocation java 15](metaspace%20allocation%20java%2015.png?raw=true "metaspace allocation java 15")  
+![metaspace allocation java 17](metaspace%20allocation%20java%2017.png?raw=true "metaspace allocation java 17")  
 
 # Some more description of the problem we faced.  
 
